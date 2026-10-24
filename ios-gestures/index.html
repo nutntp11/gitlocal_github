@@ -1,0 +1,763 @@
+<title>iOS Gestures Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+  /* Layout: ห้องทดลองอุปกรณ์ — การ์ด 3×3 เหมือนสไลด์ต้นฉบับ แต่ละช่องคือ iPhone ที่เล่นได้จริง + คำสั่งที่ใช้บอก AI + โค้ด */
+  :root {
+    --bg: #eceff4;
+    --card: #ffffff;
+    --ink: #15171c;
+    --muted: #646b7a;
+    --line: #dce1e9;
+    --accent: #007aff;
+    --danger: #ff3b30;
+    --bezel: #1b1d22;
+    --screen: #f2f3f7;
+    --cell: #ffffff;
+    --fill: #e3e6ec;
+    --bubble: #e9e9eb;
+    --code-bg: #f5f6f9;
+    --scrim: rgba(20, 22, 28, .28);
+    --font-display: "Bricolage Grotesque", "IBM Plex Sans Thai", system-ui, sans-serif;
+    --font-body: "IBM Plex Sans Thai", system-ui, -apple-system, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "IBM Plex Sans Thai", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d0f13; --card: #16191e; --ink: #eef0f4; --muted: #949bab; --line: #282d36;
+      --accent: #0a84ff; --danger: #ff453a; --bezel: #3b3f47; --screen: #000000; --cell: #1c1c1e;
+      --fill: #2c2f36; --bubble: #26262a; --code-bg: #101317; --scrim: rgba(0, 0, 0, .45);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d0f13; --card: #16191e; --ink: #eef0f4; --muted: #949bab; --line: #282d36;
+    --accent: #0a84ff; --danger: #ff453a; --bezel: #3b3f47; --screen: #000000; --cell: #1c1c1e;
+    --fill: #2c2f36; --bubble: #26262a; --code-bg: #101317; --scrim: rgba(0, 0, 0, .45);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.6 var(--font-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 40px 64px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 32px; }
+
+  /* ---------- hero ---------- */
+  .hero { display: grid; gap: 10px; }
+  .kicker { font: 500 12px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0; }
+  h1 { font: 700 clamp(36px, 6vw, 60px)/1 var(--font-display); letter-spacing: -.03em; margin: 0; text-wrap: balance; }
+  h1 span { color: var(--muted); font-weight: 500; }
+  .lede { margin: 0; max-width: 62ch; color: var(--muted); }
+  .tips { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; padding: 0; list-style: none; }
+  .tips li { font-size: 13px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+  .tips b { font-weight: 600; }
+
+  /* ---------- gallery ---------- */
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px 18px 16px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+  .card header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .card h2 { font: 700 22px/1.1 var(--font-display); letter-spacing: -.01em; margin: 0; }
+  .card .th { margin: 0; font-size: 13px; color: var(--muted); }
+  .say { margin: 0; font-size: 13.5px; line-height: 1.5; }
+  .say span { display: block; font: 500 11px/1.4 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .say q { font-style: normal; }
+
+  details { border-top: 1px solid var(--line); padding-top: 10px; min-width: 0; }
+  summary { cursor: pointer; font: 500 13px/1.4 var(--font-mono); color: var(--accent); list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 16px; }
+  details[open] summary::after { content: "−"; }
+  summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  .code { position: relative; margin-top: 10px; }
+  pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow-x: auto; font: 12px/1.55 var(--font-mono); color: var(--ink); }
+  .copy { position: absolute; top: 6px; right: 6px; font: 500 11px/1 var(--font-mono); padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+
+  /* ---------- phone ---------- */
+  .phone { width: min(100%, 244px); aspect-ratio: 9 / 19.5; margin: 0 auto; border-radius: 38px; padding: 7px; background: var(--bezel); max-width: 100%; }
+  .screen { position: relative; height: 100%; border-radius: 31px; overflow: hidden; background: var(--screen); font: 13px/1.35 var(--ui); color: var(--ink); -webkit-user-select: none; user-select: none; isolation: isolate; }
+  .status { position: absolute; z-index: 30; inset: 0 0 auto; height: 34px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px 0 24px; font: 600 12px/1 var(--ui); pointer-events: none; }
+  .status::before { content: ""; position: absolute; left: 50%; top: 8px; width: 68px; height: 20px; border-radius: 12px; background: #000; transform: translateX(-50%); }
+  .status i { width: 34px; height: 9px; background: linear-gradient(90deg, currentColor 0 22%, transparent 22% 30%, currentColor 30% 56%, transparent 56% 64%, currentColor 64%); border-radius: 2px; opacity: .85; }
+  .home { position: absolute; z-index: 30; bottom: 7px; left: 50%; width: 92px; height: 4px; border-radius: 4px; background: var(--ink); opacity: .85; transform: translateX(-50%); pointer-events: none; }
+  .body { position: absolute; inset: 34px 0 0; }
+  .navtitle { font: 700 22px/1.1 var(--ui); padding: 6px 14px 10px; margin: 0; }
+  .toast { position: absolute; z-index: 25; left: 50%; bottom: 26px; transform: translate(-50%, 8px); background: var(--ink); color: var(--card); font: 500 11.5px/1 var(--ui); padding: 8px 12px; border-radius: 999px; white-space: nowrap; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
+  .toast.show { opacity: .92; transform: translate(-50%, 0); }
+
+  /* 1 tap */
+  .springboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 8px; padding: 18px 14px; }
+  .app { display: grid; justify-items: center; gap: 5px; font-size: 9.5px; cursor: pointer; }
+  .app .icon { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; color: #fff; font: 700 15px/1 var(--ui); transition: transform .15s, filter .15s; }
+  .app.is-pressed .icon { transform: scale(.88); filter: brightness(.82); }
+  .launch { position: absolute; inset: 0; z-index: 20; display: grid; place-content: center; text-align: center; gap: 6px; color: #fff; transition: transform .38s cubic-bezier(.2,.8,.2,1), opacity .25s, border-radius .38s; }
+  .launch strong { font: 700 26px/1 var(--ui); }
+  .launch small { opacity: .8; }
+
+  /* 2 double tap */
+  .post-head { display: flex; align-items: center; gap: 8px; padding: 4px 12px 8px; font-weight: 600; font-size: 12px; }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #ff9500, #ff2d55); }
+  .photo { position: relative; aspect-ratio: 1; background: var(--fill); overflow: hidden; cursor: pointer; }
+  .photo svg { display: block; width: 100%; height: 100%; }
+  .burst { position: absolute; width: 84px; height: 84px; margin: -42px 0 0 -42px; color: #fff; filter: drop-shadow(0 4px 14px rgba(0,0,0,.3)); animation: burst .9s cubic-bezier(.2,.8,.2,1) forwards; pointer-events: none; }
+  @keyframes burst { 0% { transform: scale(0); opacity: 0; } 15% { transform: scale(1.2); opacity: 1; } 30% { transform: scale(.95); } 45%, 70% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.1) translateY(-30px); opacity: 0; } }
+  .post-actions { display: flex; gap: 14px; padding: 10px 12px 4px; align-items: center; }
+  .post-actions button { border: 0; background: none; padding: 0; color: var(--ink); cursor: pointer; display: grid; }
+  .post-actions svg { width: 24px; height: 24px; }
+  .liked { color: var(--danger) !important; animation: pop .35s; }
+  @keyframes pop { 50% { transform: scale(1.25); } }
+  .likes { padding: 0 12px; font-weight: 600; font-size: 12px; }
+  .caption { padding: 2px 12px; font-size: 12px; color: var(--muted); }
+
+  /* 3 long press */
+  .chat { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; }
+  .bubble { position: relative; max-width: 78%; padding: 8px 12px; border-radius: 18px; background: var(--bubble); align-self: flex-start; transition: transform .45s cubic-bezier(.2,.8,.2,1); cursor: pointer; }
+  .bubble.me { align-self: flex-end; background: var(--accent); color: #fff; }
+  .bubble.is-pressing { transform: scale(.94); }
+  .bubble .react { position: absolute; top: -10px; right: -6px; background: var(--cell); border: 1px solid var(--line); border-radius: 999px; font-size: 11px; padding: 1px 5px; }
+  .bubble.me .react { right: auto; left: -6px; }
+  .ctx { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 0 14px; background: var(--scrim); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: fade .2s; }
+  .ctx.right { align-items: flex-end; }
+  .ctx.left { align-items: flex-start; }
+  .ctx .bubble { transform: scale(1.04); animation: lift .25s cubic-bezier(.2,.8,.2,1); }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes lift { from { transform: scale(.94); } }
+  .reactions { display: flex; gap: 2px; background: var(--cell); border-radius: 999px; padding: 4px 6px; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+  .reactions button { border: 0; background: none; font-size: 19px; padding: 2px 4px; cursor: pointer; border-radius: 50%; }
+  .menu { width: 168px; background: var(--cell); border-radius: 13px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+  .menu button { display: flex; justify-content: space-between; width: 100%; border: 0; background: none; color: var(--ink); font: 13px/1 var(--ui); padding: 11px 14px; cursor: pointer; }
+  .menu button + button { border-top: 1px solid var(--line); }
+  .menu .danger { color: var(--danger); }
+
+  /* 4 swipe */
+  .mail { border-top: 1px solid var(--line); }
+  .mail-row { background: var(--cell); border-bottom: 1px solid var(--line); transition: height .25s, opacity .25s; }
+  .mail-row .inner { padding: 9px 14px; display: grid; gap: 1px; }
+  .mail-row .top { display: flex; justify-content: space-between; font-weight: 600; font-size: 12.5px; }
+  .mail-row .top small { font-weight: 400; color: var(--muted); }
+  .mail-row .sub { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mail-row .pre { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty { padding: 40px 14px; text-align: center; color: var(--muted); display: grid; gap: 10px; justify-items: center; }
+  .pill { border: 0; border-radius: 999px; padding: 8px 14px; background: var(--accent); color: #fff; font: 600 12px/1 var(--ui); cursor: pointer; }
+
+  /* 5 drag */
+  .todo { list-style: none; margin: 0; padding: 0 12px; display: grid; gap: 6px; }
+  .todo li { display: flex; align-items: center; gap: 10px; padding: 9px 10px; background: var(--cell); border-radius: 12px; border: 1px solid var(--line); transition: box-shadow .2s; }
+  .todo li.is-dragging { box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+  .todo .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--fill); font: 600 10.5px/1 var(--ui); font-variant-numeric: tabular-nums; flex: none; }
+  .todo .t { flex: 1; min-width: 0; font-size: 12px; }
+  .todo .t small { display: block; color: var(--muted); font-size: 10.5px; }
+  .handle { flex: none; width: 26px; height: 26px; display: grid; place-items: center; color: var(--muted); cursor: grab; border-radius: 6px; }
+  .handle:active { cursor: grabbing; }
+  .note { padding: 10px 14px; font-size: 11px; color: var(--muted); }
+
+  /* 6 pinch */
+  .viewer { position: absolute; inset: 0; background: #000; cursor: zoom-in; }
+  .viewer .content svg { display: block; width: 100%; height: auto; }
+  .zoom-badge { position: absolute; z-index: 21; top: 44px; right: 12px; background: rgba(255,255,255,.18); color: #fff; font: 600 11px/1 var(--ui); padding: 5px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); pointer-events: none; }
+  .viewer-hint { position: absolute; z-index: 21; bottom: 22px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,.7); font-size: 10.5px; pointer-events: none; }
+  .screen.dark-ui { color: #fff; }
+  .screen.dark-ui .home { background: #fff; }
+
+  /* 7 pull to refresh */
+  .feed { position: absolute; inset: 40px 0 0; overflow-y: auto; scrollbar-width: none; }
+  .feed::-webkit-scrollbar { display: none; }
+  .feed-list { display: grid; gap: 8px; padding: 2px 12px 24px; }
+  .feed-item { background: var(--cell); border-radius: 12px; padding: 10px 12px; display: grid; grid-template-columns: 28px 1fr; gap: 2px 10px; border: 1px solid var(--line); }
+  .feed-item .dot { grid-row: span 2; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: #fff; font: 700 12px/1 var(--ui); }
+  .feed-item b { font-size: 12px; }
+  .feed-item span { font-size: 11px; color: var(--muted); }
+  .feed-item.fresh { animation: fresh 1.4s ease-out; }
+  @keyframes fresh { 0% { background: color-mix(in srgb, var(--accent) 22%, var(--cell)); transform: translateY(-6px); opacity: 0; } 25% { opacity: 1; transform: none; } }
+  .ptr-head { position: absolute; inset: 0 0 auto; height: 40px; z-index: 2; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; font: 700 17px/1 var(--ui); background: var(--screen); }
+  .ptr-head small { font: 400 10.5px/1 var(--ui); color: var(--muted); }
+
+  /* 8 edge swipe */
+  .page { position: absolute; inset: 0; background: var(--screen); }
+  .group { margin: 0 12px; background: var(--cell); border-radius: 12px; overflow: hidden; }
+  .group button, .group div { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; background: none; color: var(--ink); font: 13px/1 var(--ui); padding: 11px 12px; text-align: left; }
+  .group > * + * { border-top: 1px solid var(--line) !important; }
+  .group button { cursor: pointer; }
+  .group .chev { color: var(--muted); }
+  .group .val { color: var(--muted); font-size: 12px; }
+  .ico { width: 22px; height: 22px; border-radius: 6px; display: inline-grid; place-items: center; color: #fff; font: 700 11px/1 var(--ui); margin-right: 10px; vertical-align: middle; }
+  .backbar { display: flex; align-items: center; height: 34px; padding: 0 6px; }
+  .backbar button { border: 0; background: none; color: var(--accent); font: 15px/1 var(--ui); cursor: pointer; padding: 6px; }
+  .edge-hint { position: absolute; z-index: 22; left: 0; top: 34px; bottom: 0; width: 24px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent), transparent); animation: breathe 2.4s ease-in-out infinite; pointer-events: none; }
+  @keyframes breathe { 50% { opacity: .25; } }
+  .section-label { padding: 14px 24px 6px; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+  /* 9 swipe to dismiss */
+  .map { position: absolute; inset: 0; background:
+      linear-gradient(115deg, transparent 47%, var(--cell) 47% 53%, transparent 53%),
+      linear-gradient(20deg, transparent 60%, var(--cell) 60% 64%, transparent 64%),
+      linear-gradient(160deg, transparent 30%, var(--cell) 30% 33%, transparent 33%),
+      var(--fill); }
+  .pin { position: absolute; left: 52%; top: 30%; width: 22px; height: 22px; border-radius: 50% 50% 50% 0; background: var(--danger); transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+  .reopen { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 5; }
+  .backdrop { position: absolute; inset: 0; z-index: 10; background: var(--scrim); }
+  .sheet { position: absolute; z-index: 11; left: 0; right: 0; bottom: 0; height: 64%; background: var(--cell); border-radius: 18px 18px 0 0; box-shadow: 0 -6px 24px rgba(0,0,0,.12); display: flex; flex-direction: column; cursor: grab; }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--line); margin: 7px auto 4px; flex: none; }
+  .sheet h3 { margin: 0; padding: 4px 16px 0; font: 700 17px/1.2 var(--ui); }
+  .sheet .meta { padding: 2px 16px 8px; color: var(--muted); font-size: 11.5px; }
+  .sheet-body { flex: 1; overflow-y: auto; padding: 0 16px 24px; display: grid; gap: 8px; align-content: start; scrollbar-width: none; }
+  .stat { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .stat b { font-variant-numeric: tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
+</style>
+
+<div class="wrap">
+  <section class="hero">
+    <p class="kicker">Vocabulary for agentic coding · Part 1</p>
+    <h1>iOS Gestures <span>9 ท่า</span></h1>
+    <p class="lede">ทุกช่องเล่นได้จริง ใช้นิ้วบนมือถือหรือใช้เมาส์บนคอมก็ได้ แต่ละท่ามีโค้ดไฟล์เดียวที่ไม่พึ่ง library อยู่ในโฟลเดอร์ <code>gestures/</code> เลือกท่าที่ต้องการแล้วคัดลอกไปใช้ในโปรเจกต์ไหนก็ได้ บรรทัด "สั่ง AI ว่า" ใต้แต่ละเครื่องคือประโยคที่ใช้สั่ง agent ให้ได้ท่านั้นตรงตัว</p>
+    <ul class="tips">
+      <li><b>Pinch ด้วยเมาส์:</b> Ctrl + scroll หรือแตะสองครั้ง</li>
+      <li><b>Touch and hold:</b> คลิกขวาก็ได้</li>
+      <li><b>Edge swipe:</b> เริ่มลากจากแถบสีฟ้าขอบซ้าย</li>
+    </ul>
+  </section>
+
+  <div class="grid">
+
+    <!-- 1 ─ Tap -->
+    <article class="card" id="tap">
+      <header><h2>Tap</h2><p class="th">แตะครั้งเดียว</p></header>
+      <div class="phone"><div class="screen">
+        <div class="status"><span>9:41</span><i></i></div>
+        <div class="body"><div class="springboard" id="springboard"></div></div>
+        <div class="home"></div>
+      </div></div>
+      <p class="say"><span>สั่ง AI ว่า</span><q>Tap an app icon to open it, with a press-down feedback.</q></p>
+      <details><summary>gestures/tap.js</summary><div class="code"><pre><code>Gestures.tap(iconEl, {
+  onTap(e, { x, y }) { openApp(); },
+  maxMove: 10,       // ลากเกินนี้ = ไม่นับ
+  maxDuration: 500,  // กดนานเกินนี้ = ไม่นับ
+});
+/* CSS: .is-pressed { transform: scale(.9) } */</code></pre></div></details>
+    </article>
+
+    <!-- 2 ─ Double tap -->
+    <article class="card" id="double-tap">
+      <header><h2>Double tap</h2><p class="th">แตะสองครั้ง</p></header>
+      <div class="phone"><div class="screen">
+        <div class="status"><span>9:41</span><i></i></div>
+        <div class="body">
+          <div class="post-head"><span class="avatar"></span>udomlarp.npt</div>
+          <div class="photo" id="photo"></div>
+          <div class="post-actions">
+            <button type="button" id="like-btn" aria-label="ถูกใจ"><svg viewBox="0 0 24 24"><path id="like-path" d="M12 20.5s-7.3-4.4-9.6-8.9C.9 8.4 2.8 4.5 6.5 4.5c2.1 0 3.8 1.2 5.5 3.1 1.7-1.9 3.4-3.1 5.5-3.1 3.7 0 5.6 3.9 4.1 7.1-2.3 4.5-9.6 8.9-9.6 8.9z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.2A8 8 0 1 1 20 11.5z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+          </div>
+          <div class="likes"><span id="like-count">128</span> คนถูกใจ</div>
+          <div class="caption">แตะรูปสองครั้งเพื่อถูกใจ</div>
+        </div>
+        <div class="toast" id="dt-toast">แตะเร็วๆ สองครั้งนะ</div>
+        <div class="home"></div>
+      </div></div>
+      <p class="say"><span>สั่ง AI ว่า</span><q>Double-tap the photo to like it, with a heart burst where I tapped.</q></p>
+      <details><summary>gestures/double-tap.js</summary><div class="code"><pre><code>Gestures.doubleTap(photoEl, {
+  onDoubleTap(e, { x, y }) { like(); burstAt(x, y); },
+  onSingleTap() { /* ไม่บังคับ — ถูกหน่วง 300ms */ },
+  interval: 300,
+});</code></pre></div></details>
+    </article>
+
+    <!-- 3 ─ Touch and hold -->
+    <article class="card" id="touch-and-hold">
+      <header><h2>Touch and hold</h2><p class="th">แตะค้าง</p></header>
+      <div class="phone"><div class="screen" id="chat-screen">
+        <div class="status"><span>9:41</span><i></i></div>
+        <div class="body"><div class="chat" id="chat"></div></div>
+        <div class="toast" id="lp-toast">คัดลอกแล้ว</div>
+        <div class="home"></div>
+      </div></div>
+      <p class="say"><span>สั่ง AI ว่า</span><q>Touch and hold a message to show reactions and a context menu, with the background blurred.</q></p>
+      <details><summary>gestures/long-press.js</summary><div class="code"><pre><code>Gestures.longPress(bubbleEl, {
+  onLongPress(e, { x, y }) { showMenu(bubbleEl); },
+  duration: 500,   // ms · คลิกขวา = เปิดทันที
+});
+/* CSS: .is-pressing { transform: scale(.94) } */</code></pre></div></details>
+    </article>
+
+    <!-- 4 ─ Swipe -->
+    <article class="card" id="swipe">
+      <header><h2>Swipe</h2><p class="th">ปัดแถวเพื่อโชว์ปุ่ม</p></header>
+      <div class="phone"><div class="screen">
+        <div class="status"><span>9:41</span><i></i></div>
+        <div class="body">
+          <p class="navtitle">กล่องจดหมาย</p>
+          <div class="mail" id="mail"></div>
+        </div>
+        <div class="toast" id="sw-toast">เก็บถาวรแล้ว</div>
+        <div class="home"></div>
+      </div></div>
+      <p class="say"><span>สั่ง AI ว่า</span><q>Swipe a row left to reveal Archive and Delete; a full swipe deletes it.</q></p>
+      <details><summary>gestures/swipe-actions.js</summary><div class="code"><pre><code>Gestures.swipeActions(rowEl, {
+  actions: [
+    { label: 'เก็บ', color: '#af52de', onAction(row, close) { close(); } },
+    { label: 'ลบ',  color: '#ff3b30', onAction(row) { row.remove(); } },
+  ],
+  fullSwipe: true,   // ปัดยาว = ทำปุ่มสุดท้าย
+});</code></pre></div></details>
+    </article>
+
+    <!-- 5 ─ Drag -->
+    <article class="card" id="drag">
+      <header><h2>Drag</h2><p class="th">ลากเรียงลำดับ</p></header>
+      <div class="phone"><div class="screen">
+        <div class="status"><span>9:41</span><i></i></div>
+        <div class="body">
+          <p class="navtitle">ลำดับร้านวันนี้</p>
+          <ul class="todo" id="todo"></ul>
+          <p class="note" id="drag-note">ลากที่ ≡ เพื่อสลับลำดับ</p>
+        </div>
+        <div class="home"></div>
+      </div></div>
+      <p class="say"><span>สั่ง AI ว่า</span><q>Drag the handle to reorder list items; other rows slide out of the way.</q></p>
+      <details><summary>gestures/drag-reorder.js</summary><div class="code"><pre><code>Gestures.dragReorder(listEl, {
+  handle: '[data-drag-handle]',
+  onReorder(from, to, item) { save(order()); },
+});</code></pre></div></details>
+    </article>
+
+    <!-- 6 ─ Pinch -->
+    <article class="card" id="pinch">
+      <header><h2>Pinch</h2><p class="th">สองนิ้วซูม</p></header>
+      <div class="phone"><div class="screen dark-ui">
+        <div class="status"><span>9:41</span><i></i></div>
+        <div class="viewer" id="viewer"><div class="content" id="viewer-content"></div></div>
+        <div class="zoom-badge" id="zoom-badge">1.0×</div>
+        <div class="viewer-hint">ซูมดูป้ายบนรถเข็นไอศกรีม</div>
+        <div class="home"></div>
+      </div></div>
+      <p class="say"><span>สั่ง AI ว่า</span><q>Pinch to zoom the photo around my fingers, pan when zoomed, and spring back at the edges.</q></p>
+      <details><summary>gestures/pinch-zoom.js</summary><div class="code"><pre><code>const zoom = Gestures.pinchZoom(viewportEl, {
+  minScale: 1, maxScale: 4, doubleTapScale: 2.5,
+  onChange({ scale }) { badge.textContent = scale.toFixed(1) + '×'; },
+});
+zoom.reset();</code></pre></div></details>
+    </article>
+
+    <!-- 7 ─ Pull to refresh -->
+    <article class="card" id="pull-to-refresh">
+      <header><h2>Pull to refresh</h2><p class="th">ดึงลงเพื่อโหลดใหม่</p></header>
+      <div class="phone"><div class="screen">
+        <div class="status"><span>9:41</span><i></i></div>
+        <div class="body">
+          <div class="ptr-head">แจ้งเตือน <small id="ptr-time">อัปเดต 9:41</small></div>
+          <div class="feed" id="feed"><div class="feed-list" id="feed-list"></div></div>
+        </div>
+        <div class="home"></div>
+      </div></div>
+      <p class="say"><span>สั่ง AI ว่า</span><q>Pull down from the top of the list to refresh, with a spinner until new items load.</q></p>
+      <details><summary>gestures/pull-to-refresh.js</summary><div class="code"><pre><code>Gestures.pullToRefresh(scrollerEl, {
+  async onRefresh() { await loadLatest(); },
+  threshold: 64,   // px ที่ต้องดึงถึง
+});</code></pre></div></details>
+    </article>
+
+    <!-- 8 ─ Edge swipe -->
+    <article class="card" id="edge-swipe">
+      <header><h2>Edge swipe</h2><p class="th">ปัดจากขอบเพื่อย้อนกลับ</p></header>
+      <div class="phone"><div class="screen">
+        <div class="status"><span>9:41</span><i></i></div>
+        <div class="body" id="nav">
+          <div class="page" id="page-list">
+            <p class="navtitle">ตั้งค่า</p>
+            <div class="group" id="settings-list"></div>
+          </div>
+          <div class="page" id="page-detail">
+            <div class="backbar"><button type="button" id="back-btn">‹ ตั้งค่า</button></div>
+            <p class="navtitle" id="detail-title">ทั่วไป</p>
+            <div class="section-label">เกี่ยวกับ</div>
+            <div class="group">
+              <div>ชื่อ <span class="val">iPhone ของเซลล์</span></div>
+              <div>เวอร์ชัน <span class="val">26.1</span></div>
+              <div>พื้นที่ว่าง <span class="val">48.2 GB</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="edge-hint" id="edge-hint"></div>
+        <div class="home"></div>
+      </div></div>
+      <p class="say"><span>สั่ง AI ว่า</span><q>Swipe from the left edge to go back, with the previous page sliding in underneath.</q></p>
+      <details><summary>gestures/edge-swipe.js</summary><div class="code"><pre><code>Gestures.edgeSwipe(screenEl, {
+  page: detailEl, under: listEl,
+  enabled: () => !detailEl.hidden,
+  onBack() { detailEl.hidden = true; },
+});</code></pre></div></details>
+    </article>
+
+    <!-- 9 ─ Swipe to dismiss -->
+    <article class="card" id="swipe-to-dismiss">
+      <header><h2>Swipe to dismiss</h2><p class="th">ปัดลงเพื่อปิด</p></header>
+      <div class="phone"><div class="screen">
+        <div class="status"><span>9:41</span><i></i></div>
+        <div class="body">
+          <div class="map"><span class="pin"></span></div>
+          <button type="button" class="pill reopen" id="reopen">ดูรายละเอียดร้าน</button>
+          <div class="backdrop" id="backdrop"></div>
+          <div class="sheet" id="sheet" tabindex="-1">
+            <div class="grabber"></div>
+            <h3>ร้านป้าแดง ตลาดบ่อพลับ</h3>
+            <p class="meta">สาย 3 · เข้าทุกวันอังคาร · ตู้แช่ 2 ใบ</p>
+            <div class="sheet-body" id="sheet-body"></div>
+          </div>
+        </div>
+        <div class="home"></div>
+      </div></div>
+      <p class="say"><span>สั่ง AI ว่า</span><q>Swipe the bottom sheet down to dismiss it; the backdrop fades as I drag.</q></p>
+      <details><summary>gestures/swipe-to-dismiss.js</summary><div class="code"><pre><code>const sheet = Gestures.swipeToDismiss(sheetEl, {
+  backdrop: backdropEl,
+  scroller: sheetEl.querySelector('.sheet-body'),
+  onDismiss() { showReopenButton(); },
+});
+sheet.open();</code></pre></div></details>
+    </article>
+
+  </div>
+</div>
+
+<script src="gestures/tap.js"></script>
+<script src="gestures/double-tap.js"></script>
+<script src="gestures/long-press.js"></script>
+<script src="gestures/swipe-actions.js"></script>
+<script src="gestures/drag-reorder.js"></script>
+<script src="gestures/pinch-zoom.js"></script>
+<script src="gestures/pull-to-refresh.js"></script>
+<script src="gestures/edge-swipe.js"></script>
+<script src="gestures/swipe-to-dismiss.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const h = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+  const HEART = 'M12 20.5s-7.3-4.4-9.6-8.9C.9 8.4 2.8 4.5 6.5 4.5c2.1 0 3.8 1.2 5.5 3.1 1.7-1.9 3.4-3.1 5.5-3.1 3.7 0 5.6 3.9 4.1 7.1-2.3 4.5-9.6 8.9-9.6 8.9z';
+
+  function toast(el, text) {
+    if (text) el.textContent = text;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 1300);
+  }
+
+  // ภาพทิวเขา — ใช้ทั้งช่อง Double tap และ Pinch (รถเข็นไอศกรีมเล็กๆ ไว้ให้ซูมหา)
+  function scene(detail) {
+    const cart = detail ? `
+      <g transform="translate(206 236)">
+        <rect x="0" y="0" width="34" height="18" rx="2" fill="#fff"/>
+        <rect x="0" y="0" width="34" height="5" fill="#e4002b"/>
+        <text x="17" y="14" font-size="6.5" font-weight="700" text-anchor="middle" fill="#e4002b" font-family="Arial, sans-serif">Wall's</text>
+        <path d="M-2 0 L17 -10 L36 0 Z" fill="#ffcc00"/>
+        <circle cx="7" cy="21" r="3" fill="#333"/><circle cx="27" cy="21" r="3" fill="#333"/>
+      </g>
+      <g fill="#2b2b2b"><path d="M60 70 q4 -4 8 0 q4 -4 8 0" fill="none" stroke="#2b2b2b" stroke-width="1.2"/><path d="M84 60 q3 -3 6 0 q3 -3 6 0" fill="none" stroke="#2b2b2b" stroke-width="1"/></g>
+      <g transform="translate(120 222)"><rect width="26" height="20" fill="#f6e7c8"/><path d="M-3 0 L13 -12 L29 0Z" fill="#b5523b"/><rect x="10" y="9" width="6" height="11" fill="#6b4a2b"/><rect x="3" y="5" width="5" height="5" fill="#9fd3ff"/></g>` : '';
+    return `<svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><linearGradient id="sky${detail ? 2 : 1}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ec5ff"/><stop offset="1" stop-color="#ffe3c2"/></linearGradient></defs>
+      <rect width="300" height="300" fill="url(#sky${detail ? 2 : 1})"/>
+      <circle cx="226" cy="84" r="26" fill="#fff6d8"/>
+      <path d="M0 210 L70 120 L120 175 L180 95 L250 170 L300 130 L300 300 L0 300Z" fill="#9aa9c4"/>
+      <path d="M0 240 L60 180 L110 220 L170 160 L230 215 L300 185 L300 300 L0 300Z" fill="#6f86a8"/>
+      <path d="M0 262 Q150 230 300 258 L300 300 L0 300Z" fill="#5d8a5e"/>
+      ${cart}
+    </svg>`;
+  }
+
+  /* 1 ─ Tap ------------------------------------------------------------ */
+  const apps = [
+    ['Mail', '#1e88ff', 'M'], ['Maps', '#34c759', '⌖'], ['Photos', '#ff9500', '✿'], ['Notes', '#ffcc00', 'N'],
+    ['Music', '#ff2d55', '♪'], ['Wallet', '#1c1c1e', 'W'], ['Clock', '#3a3a3c', '◷'], ['Weather', '#32ade6', '☀'],
+    ['Camera', '#8e8e93', '◉'], ['Files', '#007aff', 'F'], ['Health', '#ff375f', '♥'], ['Settings', '#636366', '⚙'],
+  ];
+  const board = $('springboard');
+  apps.forEach(([name, color, glyph]) => {
+    const app = h(`<div class="app"><span class="icon" style="background:${color}">${glyph}</span>${name}</div>`);
+    board.appendChild(app);
+    Gestures.tap(app, { onTap: () => launch(app, name, color) });
+  });
+  function launch(app, name, color) {
+    const screen = board.closest('.screen');
+    const s = screen.getBoundingClientRect();
+    const r = app.querySelector('.icon').getBoundingClientRect();
+    const view = h(`<div class="launch" style="background:${color}"><strong>${name}</strong><small>แตะเพื่อกลับหน้าโฮม</small></div>`);
+    view.style.transformOrigin = `${r.left - s.left + r.width / 2}px ${r.top - s.top + r.height / 2}px`;
+    view.style.transform = 'scale(.15)';
+    view.style.opacity = '0';
+    view.style.borderRadius = '60px';
+    screen.appendChild(view);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      view.style.transform = 'scale(1)'; view.style.opacity = '1'; view.style.borderRadius = '0';
+    }));
+    const g = Gestures.tap(view, { onTap() {
+      g.destroy();
+      view.style.transform = 'scale(.15)'; view.style.opacity = '0'; view.style.borderRadius = '60px';
+      setTimeout(() => view.remove(), 380);
+    } });
+  }
+
+  /* 2 ─ Double tap ----------------------------------------------------- */
+  const photo = $('photo');
+  photo.innerHTML = scene(false);
+  let liked = false, likes = 128;
+  function setLiked(on) {
+    if (on === liked) return;
+    liked = on;
+    likes += on ? 1 : -1;
+    $('like-count').textContent = likes;
+    const p = $('like-path');
+    p.setAttribute('fill', on ? 'currentColor' : 'none');
+    $('like-btn').classList.toggle('liked', on);
+  }
+  Gestures.doubleTap(photo, {
+    onDoubleTap(e, { x, y }) {
+      setLiked(true);
+      const heart = h(`<svg class="burst" viewBox="0 0 24 24" style="left:${x}px;top:${y}px"><path d="${HEART}" fill="currentColor"/></svg>`);
+      photo.appendChild(heart);
+      heart.addEventListener('animationend', () => heart.remove());
+    },
+    onSingleTap() { toast($('dt-toast')); },
+  });
+  $('like-btn').addEventListener('click', () => setLiked(!liked));
+
+  /* 3 ─ Touch and hold ------------------------------------------------- */
+  const messages = [
+    ['them', 'พรุ่งนี้สาย 3 ขอเพิ่มตู้แช่ 1 ใบครับ'],
+    ['me', 'โอเค เดี๋ยวแจ้งทีมจัดส่งให้'],
+    ['them', 'ร้านป้าแดงสั่ง Cornetto เพิ่ม 2 ลัง'],
+    ['me', 'รับทราบ ใส่ในบิลรอบเช้าเลย'],
+    ['them', 'ขอบคุณครับ'],
+  ];
+  const chat = $('chat');
+  const chatScreen = $('chat-screen');
+  messages.forEach(([who, text]) => {
+    const b = h(`<div class="bubble ${who === 'me' ? 'me' : ''}"><span class="txt"></span></div>`);
+    b.querySelector('.txt').textContent = text;
+    chat.appendChild(b);
+    Gestures.longPress(b, { onLongPress: () => openContext(b) });
+  });
+  function openContext(b) {
+    const mine = b.classList.contains('me');
+    const ctx = h(`<div class="ctx ${mine ? 'right' : 'left'}">
+      <div class="reactions">${['❤️', '👍', '😂', '😮', '🙏'].map((r) => `<button type="button">${r}</button>`).join('')}</div>
+      <div class="bubble ${mine ? 'me' : ''}"></div>
+      <div class="menu">
+        <button type="button" data-act="reply">ตอบกลับ <span>↩</span></button>
+        <button type="button" data-act="copy">คัดลอก <span>⧉</span></button>
+        <button type="button" data-act="delete" class="danger">ลบ <span>⌫</span></button>
+      </div></div>`);
+    ctx.querySelector('.bubble').textContent = b.querySelector('.txt').textContent;
+    chatScreen.appendChild(ctx);
+    const close = () => ctx.remove();
+    ctx.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return close();
+      if (btn.closest('.reactions')) {
+        let badge = b.querySelector('.react');
+        if (!badge) { badge = h('<span class="react"></span>'); b.appendChild(badge); }
+        badge.textContent = btn.textContent;
+      } else if (btn.dataset.act === 'copy') {
+        const text = b.querySelector('.txt').textContent;
+        try { navigator.clipboard.writeText(text).catch(() => {}); } catch (_) {}
+        toast($('lp-toast'), 'คัดลอกแล้ว');
+      } else if (btn.dataset.act === 'delete') {
+        b.remove();
+      } else {
+        toast($('lp-toast'), 'ตอบกลับข้อความนี้');
+      }
+      close();
+    });
+  }
+
+  /* 4 ─ Swipe ---------------------------------------------------------- */
+  const mails = [
+    ['รายงานอัตโนมัติ', '7:02', 'Sales by Invoice ประจำวัน', 'ดึงจาก SAP สำเร็จ 14 ไฟล์'],
+    ['ทีมจัดส่ง', '7:45', 'แผนส่งของพรุ่งนี้', 'สาย 1–6 รวม 182 ร้าน'],
+    ['ฝ่ายบัญชี', '8:10', 'บิลค้างชำระเกิน 30 วัน', 'มี 6 ร้านต้องติดตาม'],
+    ['เซลล์สาย 3', '8:31', 'ขอตู้แช่เพิ่ม', 'ร้านใหม่หน้าโรงเรียน'],
+    ['คลังสินค้า', '9:05', 'สต็อก Cornetto ใกล้หมด', 'เหลือ 40 ลัง'],
+    ['GPS', '9:20', 'รถทะเบียน 3 จอดนาน', 'จอดเกิน 25 นาที'],
+  ];
+  const mail = $('mail');
+  function fillMail() {
+    mail.innerHTML = '';
+    mails.forEach(([from, time, sub, pre]) => {
+      const row = h(`<div class="mail-row"><div class="inner">
+        <div class="top"><span></span><small>${time}</small></div>
+        <div class="sub"></div><div class="pre"></div></div></div>`);
+      row.querySelector('.top span').textContent = from;
+      row.querySelector('.sub').textContent = sub;
+      row.querySelector('.pre').textContent = pre;
+      mail.appendChild(row);
+      const remove = () => {
+        row.style.height = row.offsetHeight + 'px';
+        requestAnimationFrame(() => { row.style.height = '0'; row.style.opacity = '0'; });
+        setTimeout(() => { row.remove(); if (!mail.children.length) showEmpty(); }, 260);
+      };
+      Gestures.swipeActions(row, {
+        actions: [
+          { label: 'เก็บ', color: '#af52de', onAction() { toast($('sw-toast'), 'เก็บถาวรแล้ว'); remove(); } },
+          { label: 'ลบ', color: '#ff3b30', onAction() { remove(); } },
+        ],
+      });
+    });
+  }
+  function showEmpty() {
+    const empty = h('<div class="empty">ไม่มีอีเมลแล้ว<button type="button" class="pill">โหลดตัวอย่างใหม่</button></div>');
+    empty.querySelector('button').addEventListener('click', fillMail);
+    mail.appendChild(empty);
+  }
+  fillMail();
+
+  /* 5 ─ Drag ----------------------------------------------------------- */
+  const stops = [
+    ['ร้านป้าแดง', 'ตลาดบ่อพลับ'], ['มินิมาร์ทหน้าโรงเรียน', 'ถ.ทรงพล'], ['ร้านเจ๊หมวย', 'ตลาดล่าง'],
+    ['ปั๊มหน้าวัด', 'ถ.เพชรเกษม'], ['ร้านลุงชัย', 'สนามจันทร์'], ['โชห่วยบ้านยาง', 'ต.บ้านยาง'],
+  ];
+  const todo = $('todo');
+  stops.forEach(([name, area]) => {
+    const li = h(`<li><span class="n"></span><span class="t"></span>
+      <span class="handle" data-drag-handle aria-label="ลากเพื่อสลับลำดับ"><svg width="16" height="12" viewBox="0 0 16 12"><path d="M1 1h14M1 6h14M1 11h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></li>`);
+    li.querySelector('.t').innerHTML = '';
+    li.querySelector('.t').append(name, h(`<small></small>`));
+    li.querySelector('.t small').textContent = area;
+    todo.appendChild(li);
+  });
+  const renumber = () => Array.from(todo.children).forEach((li, i) => (li.querySelector('.n').textContent = i + 1));
+  renumber();
+  Gestures.dragReorder(todo, {
+    onReorder(from, to) {
+      renumber();
+      $('drag-note').textContent = `ย้ายจากลำดับ ${from + 1} → ${to + 1}`;
+    },
+  });
+
+  /* 6 ─ Pinch ---------------------------------------------------------- */
+  const viewerContent = $('viewer-content');
+  viewerContent.innerHTML = scene(true);
+  Gestures.pinchZoom($('viewer'), {
+    minScale: 1, maxScale: 5, doubleTapScale: 3,
+    onChange({ scale }) { $('zoom-badge').textContent = scale.toFixed(1) + '×'; },
+  });
+
+  /* 7 ─ Pull to refresh ------------------------------------------------ */
+  const pool = [
+    ['ส่ง', '#34c759', 'ส่งของสำเร็จ · สาย 2', 'บิล MD ครบ 31 ร้าน'],
+    ['ใหม่', '#007aff', 'เปิดบัญชีร้านใหม่', 'มินิมาร์ท ต.ห้วยจรเข้'],
+    ['฿', '#ff9500', 'GSV วันนี้แตะเป้า 80%', 'เหลือ 3 สายยังไม่ปิด'],
+    ['!', '#ff3b30', 'บิล MC ถูกยกเลิก 1 ใบ', 'สาย 5 · ร้านปิด'],
+    ['CS', '#5856d6', 'Sales in CS เกินเป้า', 'สาย 1 ขาย 214 ลัง'],
+    ['GPS', '#8e8e93', 'รถกลับถึงคลัง', 'ครบ 6 คัน'],
+  ];
+  const feedList = $('feed-list');
+  let poolIdx = 0;
+  function feedItem(fresh) {
+    const [glyph, color, title, sub] = pool[poolIdx++ % pool.length];
+    const el = h(`<div class="feed-item ${fresh ? 'fresh' : ''}"><span class="dot" style="background:${color}">${glyph}</span><b></b><span></span></div>`);
+    el.querySelector('b').textContent = title;
+    el.querySelector('span:last-child').textContent = sub;
+    return el;
+  }
+  for (let i = 0; i < 6; i++) feedList.appendChild(feedItem(false));
+  let minute = 41;
+  Gestures.pullToRefresh($('feed'), {
+    async onRefresh() {
+      await new Promise((r) => setTimeout(r, 1100));
+      feedList.prepend(feedItem(true));
+      minute = (minute + 1) % 60;
+      $('ptr-time').textContent = `อัปเดต 9:${String(minute).padStart(2, '0')}`;
+    },
+  });
+
+  /* 8 ─ Edge swipe ----------------------------------------------------- */
+  const settings = [['ทั่วไป', '#8e8e93', '⚙'], ['การแจ้งเตือน', '#ff3b30', '!'], ['ความเป็นส่วนตัว', '#007aff', '✋'], ['แบตเตอรี่', '#34c759', '▮'], ['เสียง', '#ff2d55', '♪']];
+  const list = $('settings-list'), detail = $('page-detail'), under = $('page-list'), hint = $('edge-hint');
+  settings.forEach(([name, color, glyph]) => {
+    const b = h(`<button type="button"><span><span class="ico" style="background:${color}">${glyph}</span></span><span class="chev">›</span></button>`);
+    b.firstElementChild.append(name);
+    b.addEventListener('click', () => push(name));
+    list.appendChild(b);
+  });
+  const EASE = 'transform .34s cubic-bezier(.2,.8,.2,1)';
+  function push(title) {
+    $('detail-title').textContent = title;
+    $('back-btn').textContent = '‹ ตั้งค่า';
+    detail.hidden = false;
+    detail.style.transition = under.style.transition = 'none';
+    detail.style.transform = 'translateX(100%)';
+    detail.getBoundingClientRect();
+    detail.style.transition = under.style.transition = EASE;
+    detail.style.transform = '';
+    under.style.transform = 'translateX(-30%)';
+    setTimeout(() => { under.style.transition = 'none'; under.style.transform = ''; }, 340);
+    hint.hidden = false;
+  }
+  function popped() { detail.hidden = true; hint.hidden = true; }
+  $('back-btn').addEventListener('click', () => {
+    detail.style.transition = under.style.transition = EASE;
+    under.style.transform = 'translateX(-30%)';
+    under.getBoundingClientRect();
+    detail.style.transform = 'translateX(100%)';
+    under.style.transform = '';
+    setTimeout(() => { detail.style.transition = 'none'; detail.style.transform = ''; popped(); }, 340);
+  });
+  Gestures.edgeSwipe($('nav').closest('.screen'), {
+    page: detail, under, enabled: () => !detail.hidden, onBack: popped,
+    onProgress(p) { hint.style.opacity = String(1 - p); },
+  });
+
+  /* 9 ─ Swipe to dismiss ----------------------------------------------- */
+  const stats = [['GSV เดือนนี้', '฿18,420'], ['Sales in CS', '46 ลัง'], ['เข้าเยี่ยมล่าสุด', '22 ต.ค.'], ['บิลค้างชำระ', 'ไม่มี'],
+    ['ตู้แช่', '2 ใบ · ปกติ'], ['สินค้าขายดี', 'Cornetto'], ['เบอร์ติดต่อ', '08x-xxx-xxxx'], ['หมายเหตุ', 'ปิดวันจันทร์']];
+  const sheetBody = $('sheet-body');
+  stats.forEach(([k, v]) => {
+    const row = h('<div class="stat"><span></span><b></b></div>');
+    row.firstChild.textContent = k; row.lastChild.textContent = v;
+    sheetBody.appendChild(row);
+  });
+  const reopen = $('reopen');
+  reopen.hidden = true;
+  const sheet = Gestures.swipeToDismiss($('sheet'), {
+    backdrop: $('backdrop'),
+    scroller: sheetBody,
+    onDismiss() { reopen.hidden = false; },
+    onOpen() { reopen.hidden = true; },
+  });
+  reopen.addEventListener('click', () => sheet.open());
+
+  /* ปุ่มคัดลอกโค้ด ------------------------------------------------------ */
+  document.querySelectorAll('.code').forEach((box) => {
+    const btn = h('<button type="button" class="copy">คัดลอก</button>');
+    btn.addEventListener('click', () => {
+      const text = box.querySelector('code').textContent;
+      const done = () => { btn.textContent = 'คัดลอกแล้ว'; setTimeout(() => (btn.textContent = 'คัดลอก'), 1200); };
+      try {
+        navigator.clipboard.writeText(text).then(done, () => selectCode(box));
+      } catch (_) { selectCode(box); }
+    });
+    box.appendChild(btn);
+  });
+  function selectCode(box) {
+    const range = document.createRange();
+    range.selectNodeContents(box.querySelector('code'));
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+  }
+})();
+</script>
